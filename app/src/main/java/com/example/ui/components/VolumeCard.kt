@@ -1,11 +1,11 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -47,9 +47,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -161,25 +163,32 @@ fun VolumeCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Visual Segmented Meter Bar
-            Row(
+            // Visual Segmented Meter Bar (Menggunakan 1 Canvas untuk hapuskan bebanan 16 Box Layout Node)
+            Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color(0xFF0F172A)),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    .background(Color(0xFF0F172A))
             ) {
                 val totalSegments = 16
+                val barHeight = size.height
+                val gap = 2.dp.toPx()
+                val totalGaps = gap * (totalSegments - 1)
+                val segmentWidth = (size.width - totalGaps) / totalSegments
+                val radius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+
                 for (s in 0 until totalSegments) {
-                    val threshold = (s.toFloat() / totalSegments)
+                    val threshold = s.toFloat() / totalSegments
                     val isSegmentLit = streamState.progress >= threshold && streamState.currentVolume > streamState.minVolume
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(if (isSegmentLit) accentColor else Color(0xFF1E293B))
+                    val color = if (isSegmentLit) accentColor else Color(0xFF1E293B)
+                    val x = s * (segmentWidth + gap)
+
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(x, 0f),
+                        size = Size(segmentWidth, barHeight),
+                        cornerRadius = radius
                     )
                 }
             }
@@ -221,7 +230,7 @@ fun VolumeCard(
                         .testTag("minus_${category.name.lowercase()}")
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Remove,
+                        imageVector = Icons.Default.Remove,
                         contentDescription = "Kurangkan ${category.title}",
                         tint = TextSecondary,
                         modifier = Modifier.size(18.dp)
@@ -273,7 +282,7 @@ fun VolumeCard(
                     )
                 }
 
-                // Sound Preview / Test Button
+                // Sound Preview / Test Button (Menggunakan graphicsLayer supaya animasi bypass recomposition)
                 ElevatedButton(
                     onClick = {
                         if (isPreviewing) onStopPreview() else onPlayPreview()
@@ -286,7 +295,11 @@ fun VolumeCard(
                     modifier = Modifier
                         .height(44.dp)
                         .weight(1.2f)
-                        .scale(if (isPreviewing) waveScale else 1f)
+                        .graphicsLayer {
+                            val scale = if (isPreviewing) waveScale else 1f
+                            scaleX = scale
+                            scaleY = scale
+                        }
                         .testTag("preview_${category.name.lowercase()}")
                 ) {
                     Icon(
