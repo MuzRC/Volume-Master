@@ -1,0 +1,39 @@
+name: volumemaster
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Supaya boleh tekan butang "Run workflow" secara manual
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Semak dan sediakan Gradle Wrapper
+        run: |
+          if [ ! -f "gradlew" ]; then
+            echo "Fail gradlew tiada di root, jana wrapper baharu..."
+            gradle wrapper
+          fi
+          chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Simpan APK ke Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: VolumeMaster-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
