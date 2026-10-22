@@ -1,0 +1,6 @@
+{
+  "name": "Volume Master",
+  "description": "Pengawal kelantangan telefon pelbagai saluran dengan meter audio dinamik dan profil pantas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
