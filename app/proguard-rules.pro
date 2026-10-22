@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# Kekalkan class model data untuk simpanan JSON SharedPreferences
+-keepclassmembers class com.example.data.** { *; }
+-keep class com.example.data.** { *; }
