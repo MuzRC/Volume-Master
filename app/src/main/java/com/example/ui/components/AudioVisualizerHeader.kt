@@ -147,3 +147,179 @@ fun AudioVisualizerHeader(
                             .size(48.dp)
                             .clip(CircleShape)
                             .background(if (isMasterMuted) RoseGlow.copy(alpha = 0.2f) else BorderDark)
+                            .testTag("master_mute_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isMasterMuted) Icons.Default.VolumeMute else Icons.Default.VolumeUp,
+                            contentDescription = if (isMasterMuted) "Nyahsenyap Semua" else "Senyap Semua",
+                            tint = if (isMasterMuted) RoseGlow else NeonCyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Add Custom Preset Button
+                    IconButton(
+                        onClick = onOpenCreatePreset,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(IndigoGlow.copy(alpha = 0.25f))
+                            .border(1.dp, IndigoGlow.copy(alpha = 0.5f), CircleShape)
+                            .testTag("create_preset_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Simpan Profil Baharu",
+                            tint = IndigoGlow,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dynamic Equalizer Level Bars Visualizer (Canvas: Diproses terus di GPU tanpa beban recomposition)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF0D1424))
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                val barCount = 20
+                val totalWidth = size.width
+                val totalHeight = size.height
+                val barWidth = 5.dp.toPx()
+                val gap = if (barCount > 1) (totalWidth - (barCount * barWidth)) / (barCount - 1) else 0f
+                val cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+
+                for (i in 0 until barCount) {
+                    val threshold = i.toFloat() / barCount
+                    val isLit = averageLevel >= threshold && !isMasterMuted
+                    val heightRatio = if (isLit) {
+                        val mod = ((i % 5) + 2) / 6f
+                        (mod * pulseAlpha).coerceIn(0.25f, 1f)
+                    } else {
+                        0.15f
+                    }
+
+                    val currentBarHeight = totalHeight * heightRatio
+                    val x = i * (barWidth + gap)
+                    val y = (totalHeight - currentBarHeight) / 2f
+
+                    val color = when {
+                        isMasterMuted -> RoseGlow.copy(alpha = 0.3f)
+                        isLit && i > 15 -> RoseGlow
+                        isLit && i > 11 -> AmberGlow
+                        isLit -> NeonCyan
+                        else -> Color(0xFF1E293B)
+                    }
+
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(x, y),
+                        size = Size(barWidth, currentBarHeight),
+                        cornerRadius = cornerRadius
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Ringer Mode Selectors (Normal, Vibrate, Silent)
+            Text(
+                text = "MOD DERINGAN SISTEM",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp
+                ),
+                color = TextMuted,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF0D1424))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                RingerModeItem(
+                    label = "Normal",
+                    icon = Icons.Default.Notifications,
+                    isSelected = currentRingerMode == RingerModeType.NORMAL,
+                    activeColor = EmeraldGlow,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onRingerModeSelected(RingerModeType.NORMAL) }
+                )
+                RingerModeItem(
+                    label = "Getar",
+                    icon = Icons.Default.Vibration,
+                    isSelected = currentRingerMode == RingerModeType.VIBRATE,
+                    activeColor = IndigoGlow,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onRingerModeSelected(RingerModeType.VIBRATE) }
+                )
+                RingerModeItem(
+                    label = "Senyap",
+                    icon = Icons.Default.NotificationsOff,
+                    isSelected = currentRingerMode == RingerModeType.SILENT,
+                    activeColor = RoseGlow,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onRingerModeSelected(RingerModeType.SILENT) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RingerModeItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isSelected: Boolean,
+    activeColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isSelected) activeColor.copy(alpha = 0.2f) else Color.Transparent)
+            .border(
+                1.dp,
+                if (isSelected) activeColor.copy(alpha = 0.6f) else Color.Transparent,
+                RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isSelected) activeColor else TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                ),
+                color = if (isSelected) TextPrimary else TextSecondary,
+                fontSize = 13.sp
+            )
+        }
+    }
+}
