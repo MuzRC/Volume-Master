@@ -97,7 +97,7 @@ fun VolumeCard(
             .clip(RoundedCornerShape(20.dp))
             .border(1.dp, BorderDark, RoundedCornerShape(20.dp)),
         color = SurfaceCard,
-        shadowElevation = 4.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
