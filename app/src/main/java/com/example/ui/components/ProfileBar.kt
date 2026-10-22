@@ -64,7 +64,7 @@ fun QuickProfileChipsRow(
 ) {
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(presets, key = { it.id }) { preset ->
             val isActive = preset.id == activePresetId
@@ -72,44 +72,24 @@ fun QuickProfileChipsRow(
 
             Box(
                 modifier = Modifier
+                    .size(48.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(chipColor.copy(alpha = if (isActive) 0.2f else 1f))
+                    .background(chipColor.copy(alpha = if (isActive) 0.25f else 1f))
                     .border(
-                        1.dp,
-                        if (isActive) NeonCyan else BorderDark,
-                        RoundedCornerShape(14.dp)
+                        width = if (isActive) 1.5.dp else 1.dp,
+                        color = if (isActive) NeonCyan else BorderDark,
+                        shape = RoundedCornerShape(14.dp)
                     )
                     .clickable { onPresetSelected(preset) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
                     .testTag("preset_chip_${preset.id}"),
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = getPresetIcon(preset.iconKey),
-                        contentDescription = preset.name,
-                        tint = if (isActive) NeonCyan else TextSecondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = preset.name,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
-                        ),
-                        color = if (isActive) TextPrimary else TextSecondary,
-                        fontSize = 13.sp
-                    )
-                    if (isActive) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Aktif",
-                            tint = NeonCyan,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = getPresetIcon(preset.iconKey),
+                    contentDescription = preset.name,
+                    tint = if (isActive) NeonCyan else TextSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
