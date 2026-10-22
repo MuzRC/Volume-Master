@@ -88,7 +88,7 @@ fun AudioVisualizerHeader(
             .clip(RoundedCornerShape(24.dp))
             .border(1.dp, BorderDark, RoundedCornerShape(24.dp)),
         color = SurfaceCard,
-        shadowElevation = 8.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
