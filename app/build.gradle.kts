@@ -36,17 +36,16 @@ android {
     }
   }
 
-  buildTypes {
-  release {
+buildTypes {
+    release {
       isCrunchPngs = false
-      isMinifyEnabled = true // TUKAR daripada false ke true
-      isShrinkResources = true // TAMBAH baris ini untuk buang aset/ikon berlebihan
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // Ikat ke debugConfig supaya APK Release terus boleh diinstall dalam telefon
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
     debug {
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
       signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
