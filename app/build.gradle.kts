@@ -39,12 +39,11 @@ android {
   }
 
   buildTypes {
-    release {
+  release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      isMinifyEnabled = true // TUKAR daripada false ke true
+      isShrinkResources = true // TAMBAH baris ini untuk buang aset/ikon berlebihan
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Do not remove or modify this signingConfig assignment. It is necessary for Android apps in
-      // AI Studio.
       signingConfig = signingConfigs.getByName("release")
     }
     debug {
