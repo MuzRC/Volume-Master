@@ -1,10 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,7 +38,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +45,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -79,17 +72,6 @@ fun VolumeCard(
 ) {
     val category = streamState.category
     val accentColor = category.accentColor
-
-    val infiniteTransition = rememberInfiniteTransition(label = "audioPlaying")
-    val waveScale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(400),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "waveScale"
-    )
 
     Surface(
         modifier = modifier
@@ -282,7 +264,7 @@ fun VolumeCard(
                     )
                 }
 
-                // Sound Preview / Test Button (Menggunakan graphicsLayer supaya animasi bypass recomposition)
+                // Sound Preview / Test Button (Zero overhead & tiada animasi jam latar)
                 ElevatedButton(
                     onClick = {
                         if (isPreviewing) onStopPreview() else onPlayPreview()
@@ -295,11 +277,6 @@ fun VolumeCard(
                     modifier = Modifier
                         .height(44.dp)
                         .weight(1.2f)
-                        .graphicsLayer {
-                            val scale = if (isPreviewing) waveScale else 1f
-                            scaleX = scale
-                            scaleY = scale
-                        }
                         .testTag("preview_${category.name.lowercase()}")
                 ) {
                     Icon(
