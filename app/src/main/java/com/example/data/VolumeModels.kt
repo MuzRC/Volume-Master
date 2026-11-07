@@ -8,57 +8,52 @@ import com.example.ui.theme.StreamMediaColor
 import com.example.ui.theme.StreamNotificationColor
 import com.example.ui.theme.StreamRingColor
 
+// 5 Kategori Saluran Utama Sistem
 enum class StreamCategory(
     val streamType: Int,
     val title: String,
-    val subtitle: String,
     val defaultIconName: String,
     val accentColor: Color
 ) {
     MEDIA(
         streamType = AudioManager.STREAM_MUSIC,
-        title = "Media & Muzik",
-        subtitle = "Video, lagu, permainan & audio aplikasi",
+        title = "Media",
         defaultIconName = "music_note",
         accentColor = StreamMediaColor
     ),
     RING(
         streamType = AudioManager.STREAM_RING,
-        title = "Nada Dering",
-        subtitle = "Panggilan masuk telefon",
+        title = "Dering",
         defaultIconName = "notifications_active",
         accentColor = StreamRingColor
     ),
     NOTIFICATION(
         streamType = AudioManager.STREAM_NOTIFICATION,
         title = "Notifikasi",
-        subtitle = "Mesej, e-mel & amaran sistem",
         defaultIconName = "chat_bubble",
         accentColor = StreamNotificationColor
     ),
     ALARM(
         streamType = AudioManager.STREAM_ALARM,
-        title = "Penggera & Jam",
-        subtitle = "Jam loceng & peringatan masa",
+        title = "Penggera",
         defaultIconName = "alarm",
         accentColor = StreamAlarmColor
     ),
     CALL(
         streamType = AudioManager.STREAM_VOICE_CALL,
-        title = "Panggilan Suara",
-        subtitle = "Kelantangan pembesar telinga panggilan",
+        title = "Panggilan",
         defaultIconName = "phone_in_talk",
         accentColor = StreamCallColor
     )
 }
 
+// State Paras Volume Semasa untuk Setiap Saluran
 data class StreamVolumeState(
     val category: StreamCategory,
     val currentVolume: Int,
     val minVolume: Int,
     val maxVolume: Int,
-    val isMuted: Boolean = false,
-    val isPreviewingSound: Boolean = false
+    val isMuted: Boolean = false
 ) {
     val progress: Float
         get() = if (maxVolume > minVolume) {
@@ -69,22 +64,28 @@ data class StreamVolumeState(
         get() = (progress * 100).toInt()
 }
 
+// 3 Mod Deringan Asas Sistem Telefon
 enum class RingerModeType(val modeValue: Int, val label: String) {
     NORMAL(AudioManager.RINGER_MODE_NORMAL, "Normal"),
     VIBRATE(AudioManager.RINGER_MODE_VIBRATE, "Getar"),
     SILENT(AudioManager.RINGER_MODE_SILENT, "Senyap")
 }
 
-data class VolumePreset(
-    val id: String,
-    val name: String,
-    val description: String,
-    val iconKey: String,
-    val ringerMode: RingerModeType = RingerModeType.NORMAL,
+// 3 Jenis Preset 1-Tap
+enum class PresetType(val label: String) {
+    SILENT("Senyap"),
+    MEDIUM("Sederhana"),
+    LOUD("Nyaring")
+}
+
+// Konfigurasi Peratusan Setiap Preset (Nilai default yang boleh diubah di tetapan)
+data class PresetSetting(
     val mediaPercent: Int,
-    val ringPercent: Int,
-    val notificationPercent: Int,
-    val alarmPercent: Int,
-    val callPercent: Int,
-    val isCustom: Boolean = false
+    val otherPercent: Int
+)
+
+data class PresetConfig(
+    val silent: PresetSetting = PresetSetting(mediaPercent = 0, otherPercent = 50),
+    val medium: PresetSetting = PresetSetting(mediaPercent = 50, otherPercent = 70),
+    val loud: PresetSetting = PresetSetting(mediaPercent = 100, otherPercent = 100)
 )
