@@ -3,44 +3,25 @@ package com.example.data
 import android.app.NotificationManager
 import android.content.Context
 import android.media.AudioManager
-import android.media.Ringtone
-import android.media.RingtoneManager
-import android.media.ToneGenerator
-import android.net.Uri
 import android.os.Build
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 
-class VolumeRepository(private val context: Context) {
+class VolumeRepository(context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
     private val prefs = context.getSharedPreferences("volume_master_prefs", Context.MODE_PRIVATE)
 
-    private var activeRingtone: Ringtone? = null
-    private var activeToneGen: ToneGenerator? = null
-
+    // Baca aras semasa bagi setiap saluran
     fun getStreamVolumeState(category: StreamCategory): StreamVolumeState {
         val max = audioManager.getStreamMaxVolume(category.streamType).coerceAtLeast(1)
         val min = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                audioManager.getStreamMinVolume(category.streamType)
-            } catch (e: Exception) {
-                0
-            }
-        } else {
-            0
-        }
+            try { audioManager.getStreamMinVolume(category.streamType) } catch (e: Exception) { 0 }
+        } else 0
+
         val current = audioManager.getStreamVolume(category.streamType)
         val isMuted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                audioManager.isStreamMute(category.streamType)
-            } catch (e: Exception) {
-                current <= min
-            }
+            try { audioManager.isStreamMute(category.streamType) } catch (e: Exception) { current <= min }
         } else {
             current <= min
         }
@@ -69,9 +50,7 @@ class VolumeRepository(private val context: Context) {
     fun isDndAccessGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             notificationManager?.isNotificationPolicyAccessGranted ?: true
-        } else {
-            true
-        }
+        } else true
     }
 
     fun setStreamVolume(streamType: Int, volume: Int): Boolean {
@@ -83,11 +62,8 @@ class VolumeRepository(private val context: Context) {
             val target = volume.coerceIn(min, max)
             audioManager.setStreamVolume(streamType, target, 0)
             true
-        } catch (e: SecurityException) {
-            Log.e("VolumeRepository", "SecurityException setting volume for stream $streamType", e)
-            false
         } catch (e: Exception) {
-            Log.e("VolumeRepository", "Error setting volume for stream $streamType", e)
+            Log.e("VolumeRepository", "Gagal ubah volume untuk stream $streamType", e)
             false
         }
     }
@@ -107,14 +83,13 @@ class VolumeRepository(private val context: Context) {
                 val direction = if (isCurrentlyMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE
                 audioManager.adjustStreamVolume(category.streamType, direction, 0)
                 true
-            } catch (e: SecurityException) {
-                Log.e("VolumeRepository", "SecurityException toggling mute", e)
+            } catch (e: Exception) {
                 false
             }
         } else {
             if (isCurrentlyMuted) {
-                val half = (audioManager.getStreamMaxVolume(category.streamType) / 2).coerceAtLeast(1)
-                setStreamVolume(category.streamType, half)
+                val defaultVol = (audioManager.getStreamMaxVolume(category.streamType) / 2).coerceAtLeast(1)
+                setStreamVolume(category.streamType, defaultVol)
             } else {
                 setStreamVolume(category.streamType, 0)
             }
@@ -125,193 +100,46 @@ class VolumeRepository(private val context: Context) {
         return try {
             audioManager.ringerMode = mode.modeValue
             true
-        } catch (e: SecurityException) {
-            Log.e("VolumeRepository", "DND access required to change ringer mode to $mode", e)
-            false
         } catch (e: Exception) {
-            Log.e("VolumeRepository", "Failed to change ringer mode", e)
+            Log.e("VolumeRepository", "Gagal ubah ringer mode ke ${mode.name}", e)
             false
         }
     }
 
-    suspend fun playStreamPreview(category: StreamCategory) = withContext(Dispatchers.IO) {
-        stopAnyActiveTone()
-        try {
-            when (category) {
-                StreamCategory.RING -> {
-                    val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    val r = RingtoneManager.getRingtone(context, uri)
-                    activeRingtone = r
-                    r?.play()
-                }
-                StreamCategory.NOTIFICATION -> {
-                    val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    val r = RingtoneManager.getRingtone(context, uri)
-                    activeRingtone = r
-                    r?.play()
-                }
-                StreamCategory.ALARM -> {
-                    val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                        ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    val r = RingtoneManager.getRingtone(context, uri)
-                    activeRingtone = r
-                    r?.play()
-                }
-                StreamCategory.MEDIA -> {
-                    activeToneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 85)
-                    activeToneGen?.startTone(ToneGenerator.TONE_PROP_BEEP2, 600)
-                }
-                StreamCategory.CALL -> {
-                    activeToneGen = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80)
-                    activeToneGen?.startTone(ToneGenerator.TONE_SUP_RINGTONE, 600)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("VolumeRepository", "Error playing preview sound for ${category.name}", e)
-        }
-    }
+    // --- PENGURUSAN TETAPAN PRESET ---
 
-    fun stopAnyActiveTone() {
-        try {
-            activeRingtone?.let {
-                if (it.isPlaying) {
-                    it.stop()
-                }
-            }
-            activeRingtone = null
-
-            activeToneGen?.release()
-            activeToneGen = null
-        } catch (e: Exception) {
-            Log.e("VolumeRepository", "Error stopping preview tone", e)
-        }
-    }
-
-    fun getDefaultPresets(): List<VolumePreset> {
-        return listOf(
-            VolumePreset(
-                id = "preset_normal",
-                name = "Normal & Seimbang",
-                description = "Tetapan harian serba boleh untuk semua keperluan",
-                iconKey = "volume_up",
-                ringerMode = RingerModeType.NORMAL,
-                mediaPercent = 65,
-                ringPercent = 70,
-                notificationPercent = 70,
-                alarmPercent = 85,
-                callPercent = 75
+    fun loadPresetConfig(): PresetConfig {
+        return PresetConfig(
+            silent = PresetSetting(
+                mediaPercent = prefs.getInt("silent_media", 0),
+                otherPercent = prefs.getInt("silent_other", 50)
             ),
-            VolumePreset(
-                id = "preset_meeting",
-                name = "Mesyuarat & Kerja",
-                description = "Deringan getar, media disenyapkan agar fokus kerja",
-                iconKey = "vibration",
-                ringerMode = RingerModeType.VIBRATE,
-                mediaPercent = 0,
-                ringPercent = 0,
-                notificationPercent = 0,
-                alarmPercent = 60,
-                callPercent = 50
+            medium = PresetSetting(
+                mediaPercent = prefs.getInt("medium_media", 50),
+                otherPercent = prefs.getInt("medium_other", 70)
             ),
-            VolumePreset(
-                id = "preset_sleep",
-                name = "Malam & Tidur",
-                description = "Senyap sepenuhnya kecuali penggera keselamatan pagi",
-                iconKey = "bedtime",
-                ringerMode = RingerModeType.SILENT,
-                mediaPercent = 0,
-                ringPercent = 0,
-                notificationPercent = 0,
-                alarmPercent = 90,
-                callPercent = 30
-            ),
-            VolumePreset(
-                id = "preset_outdoor",
-                name = "Luar / Bising",
-                description = "Kelantangan maksimum 100% untuk persekitaran bising",
-                iconKey = "campaign",
-                ringerMode = RingerModeType.NORMAL,
-                mediaPercent = 100,
-                ringPercent = 100,
-                notificationPercent = 100,
-                alarmPercent = 100,
-                callPercent = 100
-            ),
-            VolumePreset(
-                id = "preset_entertainment",
-                name = "Muzik & Pawagam",
-                description = "Media bertenaga tinggi dengan notifikasi lembut",
-                iconKey = "movie",
-                ringerMode = RingerModeType.NORMAL,
-                mediaPercent = 85,
-                ringPercent = 30,
-                notificationPercent = 20,
-                alarmPercent = 70,
-                callPercent = 60
+            loud = PresetSetting(
+                mediaPercent = prefs.getInt("loud_media", 100),
+                otherPercent = prefs.getInt("loud_other", 100)
             )
         )
     }
 
-    fun loadCustomPresets(): List<VolumePreset> {
-        val jsonString = prefs.getString("custom_presets_json", null) ?: return emptyList()
-        val list = mutableListOf<VolumePreset>()
-        try {
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                val obj = jsonArray.getJSONObject(i)
-                val modeStr = obj.optString("ringerMode", "NORMAL")
-                val mode = try { RingerModeType.valueOf(modeStr) } catch (e: Exception) { RingerModeType.NORMAL }
-                list.add(
-                    VolumePreset(
-                        id = obj.getString("id"),
-                        name = obj.getString("name"),
-                        description = obj.optString("description", "Profil tersuai"),
-                        iconKey = obj.optString("iconKey", "tune"),
-                        ringerMode = mode,
-                        mediaPercent = obj.optInt("mediaPercent", 50),
-                        ringPercent = obj.optInt("ringPercent", 50),
-                        notificationPercent = obj.optInt("notificationPercent", 50),
-                        alarmPercent = obj.optInt("alarmPercent", 70),
-                        callPercent = obj.optInt("callPercent", 60),
-                        isCustom = true
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("VolumeRepository", "Error parsing custom presets", e)
+    fun savePresetConfig(config: PresetConfig) {
+        prefs.edit().apply {
+            putInt("silent_media", config.silent.mediaPercent)
+            putInt("silent_other", config.silent.otherPercent)
+            putInt("medium_media", config.medium.mediaPercent)
+            putInt("medium_other", config.medium.otherPercent)
+            putInt("loud_media", config.loud.mediaPercent)
+            putInt("loud_other", config.loud.otherPercent)
+            apply()
         }
-        return list
     }
 
-    fun saveCustomPreset(preset: VolumePreset) {
-        val existing = loadCustomPresets().filter { it.id != preset.id }.toMutableList()
-        existing.add(preset.copy(isCustom = true))
-        saveCustomPresetsList(existing)
-    }
-
-    fun deleteCustomPreset(id: String) {
-        val existing = loadCustomPresets().filter { it.id != id }
-        saveCustomPresetsList(existing)
-    }
-
-    private fun saveCustomPresetsList(list: List<VolumePreset>) {
-        val jsonArray = JSONArray()
-        for (item in list) {
-            val obj = JSONObject().apply {
-                put("id", item.id)
-                put("name", item.name)
-                put("description", item.description)
-                put("iconKey", item.iconKey)
-                put("ringerMode", item.ringerMode.name)
-                put("mediaPercent", item.mediaPercent)
-                put("ringPercent", item.ringPercent)
-                put("notificationPercent", item.notificationPercent)
-                put("alarmPercent", item.alarmPercent)
-                put("callPercent", item.callPercent)
-            }
-            jsonArray.put(obj)
-        }
-        prefs.edit().putString("custom_presets_json", jsonArray.toString()).apply()
+    fun resetPresetConfig(): PresetConfig {
+        val defaultConfig = PresetConfig()
+        savePresetConfig(defaultConfig)
+        return defaultConfig
     }
 }
